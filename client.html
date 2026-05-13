@@ -228,11 +228,25 @@
                 border-radius: 24px 24px 0 0 !important;
             }
 
-            /* Auth overlay: scrollable on small screens */
-            #authOverlay > div:nth-child(2) {
-                max-height: 100dvh;
-                overflow-y: auto;
+            /* Auth overlay: scrollable on mobile, hero hidden */
+            #authOverlay {
+                align-items: flex-start !important;
+                overflow-y: auto !important;
                 -webkit-overflow-scrolling: touch;
+                padding: 16px !important;
+            }
+
+            /* Ẩn phần hero/marketing, chỉ hiện form đăng nhập */
+            #authOverlay > div:nth-child(2) > div:first-child {
+                display: none !important;
+            }
+
+            /* Form chiếm toàn bộ width */
+            #authOverlay > div:nth-child(2) {
+                grid-template-columns: 1fr !important;
+                max-width: 480px;
+                margin: auto;
+                padding: 8px 0 24px;
             }
 
             /* Sidebar user info: compact */
@@ -387,11 +401,11 @@
                             <span class="material-symbols-outlined">arrow_back</span>
                         </button>
                         <div class="min-w-0">
-                            <div id="chatTitle" class="truncate text-lg font-bold text-white sm:text-xl">Chưa chọn hội thoại</div>
-                            <div id="chatSubtitle" class="mt-0.5 truncate text-xs text-slate-400 sm:mt-1 sm:text-sm">Chọn một cuộc trò chuyện ở sidebar hoặc tạo mới.</div>
+                            <div id="chatTitle" class="truncate text-lg font-bold text-white lg:text-xl">Chưa chọn hội thoại</div>
+                            <div id="chatSubtitle" class="mt-0.5 truncate text-xs text-slate-400 lg:mt-1 lg:text-sm">Chọn một cuộc trò chuyện ở sidebar hoặc tạo mới.</div>
                         </div>
                     </div>
-                    <div class="flex shrink-0 items-center gap-1 sm:gap-2">
+                    <div class="flex shrink-0 items-center gap-1 lg:gap-2">
                         <button id="voiceCallBtn" class="call-btn hidden rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-white hover:bg-white/10">
                             <span class="material-symbols-outlined align-middle">call</span>
                             Voice
