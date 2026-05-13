@@ -85,6 +85,35 @@ class WeRTCSignalPayload(BaseModel):
     payload: dict[str, Any] | list[Any] | str | int | float | None = None
 
 
+# === New Pydantic Models ===
+class FriendRequestPayload(BaseModel):
+    target_email: str
+
+
+class CreateGroupPayload(BaseModel):
+    name: str
+    max_members: int = 50
+
+
+class InviteMemberPayload(BaseModel):
+    email: str
+
+
+class UpdateMemberRolePayload(BaseModel):
+    role: str  # 'admin' | 'member'
+
+
+class UpdateGroupSettingsPayload(BaseModel):
+    name: str | None = None
+    max_members: int | None = None
+    messaging_mode: str | None = None  # 'all' | 'admin_only'
+
+
+class UpdateProfilePayload(BaseModel):
+    display_name: str | None = None
+    bio: str | None = None
+
+
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -145,6 +174,8 @@ def init_db() -> None:
                 password_hash TEXT NOT NULL,
                 display_name TEXT NOT NULL,
                 auth_provider TEXT NOT NULL,
+                avatar_url TEXT,
+                bio TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
@@ -164,6 +195,8 @@ def init_db() -> None:
                 created_by TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
+                max_members INTEGER NOT NULL DEFAULT 100,
+                messaging_mode TEXT NOT NULL DEFAULT 'all',
                 FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE CASCADE
             );
 
@@ -214,14 +247,51 @@ def init_db() -> None:
                 FOREIGN KEY(upload_id) REFERENCES uploads(id) ON DELETE CASCADE
             );
 
+            CREATE TABLE IF NOT EXISTS friends (
+                id TEXT PRIMARY KEY,
+                requester_id TEXT NOT NULL,
+                receiver_id TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(requester_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY(receiver_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS notifications (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                type TEXT NOT NULL,
+                conversation_id TEXT,
+                from_user_id TEXT,
+                body TEXT NOT NULL,
+                is_read INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+
             CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
             CREATE INDEX IF NOT EXISTS idx_members_user_id ON conversation_members(user_id);
             CREATE INDEX IF NOT EXISTS idx_members_conversation_id ON conversation_members(conversation_id);
             CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
             CREATE INDEX IF NOT EXISTS idx_uploads_owner_id ON uploads(owner_id);
             CREATE INDEX IF NOT EXISTS idx_attachments_message_id ON attachments(message_id);
+            CREATE INDEX IF NOT EXISTS idx_friends_requester ON friends(requester_id);
+            CREATE INDEX IF NOT EXISTS idx_friends_receiver ON friends(receiver_id);
+            CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
             """
         )
+        # Migrate cột mới vào bảng cũ (SQLite không hỗ trợ IF NOT EXISTS cho ALTER TABLE)
+        for migration_sql in [
+            "ALTER TABLE conversations ADD COLUMN max_members INTEGER NOT NULL DEFAULT 100",
+            "ALTER TABLE conversations ADD COLUMN messaging_mode TEXT NOT NULL DEFAULT 'all'",
+            "ALTER TABLE users ADD COLUMN avatar_url TEXT",
+            "ALTER TABLE users ADD COLUMN bio TEXT",
+        ]:
+            try:
+                conn.execute(migration_sql)
+            except Exception:
+                pass  # Cột đã tồn tại, bỏ qua
 
 
 def hash_password(password: str) -> str:
@@ -258,7 +328,7 @@ def verify_password(password: str, encoded: str) -> bool:
 
 
 def serialize_user(row: sqlite3.Row) -> dict[str, Any]:
-    return {
+    d = {
         "id": row["id"],
         "email": row["email"],
         "display_name": row["display_name"],
@@ -266,6 +336,12 @@ def serialize_user(row: sqlite3.Row) -> dict[str, Any]:
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
     }
+    try:
+        d["avatar_url"] = row["avatar_url"]
+        d["bio"] = row["bio"]
+    except Exception:
+        pass
+    return d
 
 
 def serialize_attachment(row: sqlite3.Row) -> dict[str, Any]:
@@ -455,9 +531,22 @@ def conversation_summary(conn: sqlite3.Connection, conversation: sqlite3.Row, cu
     last_message = get_last_message(conn, conversation["id"])
     online_count = sum(1 for member in members if member["id"] in online_connections)
     title, subtitle = conversation_title(conn, conversation, members, current_user_id)
+    # can_send: tôn trọng messaging_mode (all | admin_only) hoặc kind==channel cũ
+    messaging_mode = "all"
+    try:
+        messaging_mode = conversation["messaging_mode"] or "all"
+    except Exception:
+        pass
     can_send = True
+    if messaging_mode == "admin_only" and (not membership or membership["role"] != "admin"):
+        can_send = False
     if conversation["kind"] == "channel" and (not membership or membership["role"] != "admin"):
         can_send = False
+    max_members = 100
+    try:
+        max_members = conversation["max_members"] or 100
+    except Exception:
+        pass
     return {
         "id": conversation["id"],
         "kind": conversation["kind"],
@@ -471,6 +560,8 @@ def conversation_summary(conn: sqlite3.Connection, conversation: sqlite3.Row, cu
         "role": membership["role"] if membership else None,
         "can_send": can_send,
         "member_count": len(members),
+        "max_members": max_members,
+        "messaging_mode": messaging_mode,
         "online_count": online_count,
         "members": members,
         "last_message": last_message,
@@ -699,8 +790,16 @@ def send_message_record(
     membership = get_membership(conn, conversation_id, current_user_id)
     if not membership:
         raise HTTPException(status_code=403, detail="Bạn chưa là thành viên của cuộc trò chuyện")
+    # Kiểm tra quyền gửi: cả channel kiểu cũ lẫn messaging_mode mới
+    messaging_mode = "all"
+    try:
+        messaging_mode = conversation["messaging_mode"] or "all"
+    except Exception:
+        pass
     if conversation["kind"] == "channel" and membership["role"] != "admin":
         raise HTTPException(status_code=403, detail="Only Admin can send messages")
+    if messaging_mode == "admin_only" and membership["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Chỉ Admin mới được gửi tin nhắn")
 
     clean_body = body.strip()
     attachment_ids = [item for item in (attachment_ids or []) if str(item).strip()]
@@ -988,19 +1087,31 @@ async def create_direct_conversation(request: Request, payload: CreateDirectPayl
 
 
 @app.post("/api/conversations")
-async def create_conversation(request: Request, payload: CreateConversationPayload) -> dict[str, Any]:
+async def create_conversation(request: Request, payload: CreateGroupPayload) -> dict[str, Any]:
+    """TASK 8: Tạo nhóm đơn giản — chỉ cần tên + số thành viên tối đa."""
     current_user = get_request_user(request)
+    clean_name = payload.name.strip()
+    if not clean_name:
+        raise HTTPException(status_code=400, detail="Tên nhóm không được để trống")
+    max_m = max(2, min(payload.max_members, 500))
     with db() as conn:
-        conversation = create_group_or_channel(
-            conn,
-            current_user["id"],
-            payload.kind,
-            payload.name,
-            payload.member_emails,
-            payload.admin_emails,
+        conversation_id = generate_id("group-")
+        now = now_iso()
+        conn.execute(
+            """
+            INSERT INTO conversations (id, kind, name, created_by, created_at, updated_at, max_members, messaging_mode)
+            VALUES (?, 'group', ?, ?, ?, ?, ?, 'all')
+            """,
+            (conversation_id, clean_name, current_user["id"], now, now, max_m),
         )
-    await notify_after_conversation(conversation["id"])
-    return {"conversation": conversation}
+        conn.execute(
+            "INSERT INTO conversation_members (conversation_id, user_id, role, joined_at) VALUES (?, ?, 'admin', ?)",
+            (conversation_id, current_user["id"], now),
+        )
+        conversation = get_conversation(conn, conversation_id)
+        summary = conversation_summary(conn, conversation, current_user["id"])
+    await notify_after_conversation(conversation_id)
+    return {"conversation": summary}
 
 
 @app.get("/api/conversations/{conversation_id}")
@@ -1045,9 +1156,371 @@ async def upload_endpoint(request: Request, files: list[UploadFile] = File(...))
     return {"uploads": uploads}
 
 
+# ================================================================
+# TASK 4: Friends API
+# ================================================================
+
+def _get_friend_record(conn: sqlite3.Connection, user_a: str, user_b: str):
+    return conn.execute(
+        """
+        SELECT * FROM friends
+        WHERE (requester_id = ? AND receiver_id = ?)
+           OR (requester_id = ? AND receiver_id = ?)
+        """,
+        (user_a, user_b, user_b, user_a),
+    ).fetchone()
+
+
+def _serialize_notif(row: sqlite3.Row, conn: sqlite3.Connection) -> dict[str, Any]:
+    from_user = None
+    if row["from_user_id"]:
+        fu = get_user_by_id(conn, row["from_user_id"])
+        if fu:
+            from_user = serialize_user(fu)
+    return {
+        "id": row["id"],
+        "type": row["type"],
+        "conversation_id": row["conversation_id"],
+        "from_user": from_user,
+        "body": row["body"],
+        "is_read": bool(row["is_read"]),
+        "created_at": row["created_at"],
+    }
+
+
+def _serialize_friend(row: sqlite3.Row, conn: sqlite3.Connection, current_user_id: str) -> dict[str, Any]:
+    other_id = row["receiver_id"] if row["requester_id"] == current_user_id else row["requester_id"]
+    other_user = get_user_by_id(conn, other_id)
+    return {
+        "id": row["id"],
+        "status": row["status"],
+        "user": serialize_user(other_user) if other_user else None,
+        "is_requester": row["requester_id"] == current_user_id,
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+@app.get("/api/friends")
+async def list_friends(request: Request) -> dict[str, Any]:
+    current_user = get_request_user(request)
+    with db() as conn:
+        rows = conn.execute(
+            """
+            SELECT * FROM friends
+            WHERE (requester_id = ? OR receiver_id = ?) AND status = 'accepted'
+            ORDER BY updated_at DESC
+            """,
+            (current_user["id"], current_user["id"]),
+        ).fetchall()
+        friends = [_serialize_friend(r, conn, current_user["id"]) for r in rows]
+    return {"friends": friends}
+
+
+@app.get("/api/friends/requests")
+async def list_friend_requests(request: Request) -> dict[str, Any]:
+    current_user = get_request_user(request)
+    with db() as conn:
+        rows = conn.execute(
+            """
+            SELECT * FROM friends
+            WHERE receiver_id = ? AND status = 'pending'
+            ORDER BY created_at DESC
+            """,
+            (current_user["id"],),
+        ).fetchall()
+        pending = [_serialize_friend(r, conn, current_user["id"]) for r in rows]
+    return {"requests": pending}
+
+
+@app.post("/api/friends/request")
+async def send_friend_request(request: Request, payload: FriendRequestPayload) -> dict[str, Any]:
+    current_user = get_request_user(request)
+    target_email = validate_email(payload.target_email)
+    with db() as conn:
+        target = get_user_by_email(conn, target_email)
+        if not target:
+            raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
+        if target["id"] == current_user["id"]:
+            raise HTTPException(status_code=400, detail="Không thể kết bạn với chính mình")
+        existing = _get_friend_record(conn, current_user["id"], target["id"])
+        if existing:
+            if existing["status"] == "accepted":
+                raise HTTPException(status_code=409, detail="Đã là bạn bè")
+            raise HTTPException(status_code=409, detail="Đã có lời mời kết bạn")
+        friend_id = generate_id("fr-")
+        now = now_iso()
+        conn.execute(
+            "INSERT INTO friends (id, requester_id, receiver_id, status, created_at, updated_at) VALUES (?, ?, ?, 'pending', ?, ?)",
+            (friend_id, current_user["id"], target["id"], now, now),
+        )
+        notif_id = generate_id("notif-")
+        conn.execute(
+            "INSERT INTO notifications (id, user_id, type, conversation_id, from_user_id, body, is_read, created_at) VALUES (?, ?, 'friend_request', NULL, ?, ?, 0, ?)",
+            (notif_id, target["id"], current_user["id"], f"{current_user['display_name']} đã gửi lời mời kết bạn", now),
+        )
+        row = conn.execute("SELECT * FROM friends WHERE id = ?", (friend_id,)).fetchone()
+        result = _serialize_friend(row, conn, current_user["id"])
+    await broadcast_to_users([target["id"]], {
+        "type": "friend_request",
+        "friend": result,
+        "at": now_iso(),
+    })
+    return {"friend": result}
+
+
+@app.post("/api/friends/{friend_id}/accept")
+async def accept_friend(friend_id: str, request: Request) -> dict[str, Any]:
+    """TASK 9: Chấp nhận → tự động tạo phòng chat 1:1."""
+    current_user = get_request_user(request)
+    with db() as conn:
+        row = conn.execute("SELECT * FROM friends WHERE id = ?", (friend_id,)).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Không tìm thấy lời mời")
+        if row["receiver_id"] != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Không có quyền")
+        if row["status"] != "pending":
+            raise HTTPException(status_code=400, detail="Lời mời không hợp lệ")
+        now = now_iso()
+        conn.execute("UPDATE friends SET status = 'accepted', updated_at = ? WHERE id = ?", (now, friend_id))
+        # TASK 9: tự động tạo phòng chat 1:1
+        conversation = ensure_direct_conversation(conn, current_user["id"], row["requester_id"])
+        notif_id = generate_id("notif-")
+        conn.execute(
+            "INSERT INTO notifications (id, user_id, type, conversation_id, from_user_id, body, is_read, created_at) VALUES (?, ?, 'friend_accepted', NULL, ?, ?, 0, ?)",
+            (notif_id, row["requester_id"], current_user["id"], f"{current_user['display_name']} đã chấp nhận lời mời kết bạn", now),
+        )
+        updated = conn.execute("SELECT * FROM friends WHERE id = ?", (friend_id,)).fetchone()
+        result = _serialize_friend(updated, conn, current_user["id"])
+    await broadcast_to_users([row["requester_id"]], {
+        "type": "friend_accepted",
+        "friend": result,
+        "conversation": conversation,
+        "at": now_iso(),
+    })
+    return {"friend": result, "conversation": conversation}
+
+
+@app.post("/api/friends/{friend_id}/reject")
+async def reject_friend(friend_id: str, request: Request) -> dict[str, Any]:
+    current_user = get_request_user(request)
+    with db() as conn:
+        row = conn.execute("SELECT * FROM friends WHERE id = ?", (friend_id,)).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Không tìm thấy lời mời")
+        if row["receiver_id"] != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Không có quyền")
+        conn.execute("UPDATE friends SET status = 'rejected', updated_at = ? WHERE id = ?", (now_iso(), friend_id))
+    return {"status": "rejected"}
+
+
+# ================================================================
+# TASK 5: Notifications API
+# ================================================================
+
+@app.get("/api/notifications")
+async def get_notifications(request: Request, limit: int = 30) -> dict[str, Any]:
+    current_user = get_request_user(request)
+    with db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
+            (current_user["id"], max(1, min(limit, 100))),
+        ).fetchall()
+        notifs = [_serialize_notif(r, conn) for r in rows]
+        unread = conn.execute(
+            "SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND is_read = 0",
+            (current_user["id"],),
+        ).fetchone()["c"]
+    return {"notifications": notifs, "unread_count": unread}
+
+
+@app.post("/api/notifications/read-all")
+async def read_all_notifications(request: Request) -> dict[str, Any]:
+    current_user = get_request_user(request)
+    with db() as conn:
+        conn.execute("UPDATE notifications SET is_read = 1 WHERE user_id = ?", (current_user["id"],))
+    return {"status": "ok"}
+
+
+# ================================================================
+# TASK 6: Group management API
+# ================================================================
+
+@app.post("/api/conversations/{conversation_id}/invite")
+async def invite_member(conversation_id: str, request: Request, payload: InviteMemberPayload) -> dict[str, Any]:
+    current_user = get_request_user(request)
+    email = validate_email(payload.email)
+    with db() as conn:
+        conversation = get_conversation(conn, conversation_id)
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Không tìm thấy nhóm")
+        if conversation["kind"] != "group":
+            raise HTTPException(status_code=400, detail="Chỉ nhóm mới hỗ trợ mời thành viên")
+        membership = get_membership(conn, conversation_id, current_user["id"])
+        if not membership or membership["role"] != "admin":
+            raise HTTPException(status_code=403, detail="Chỉ Admin mới có thể mời thành viên")
+        member_count = conn.execute(
+            "SELECT COUNT(*) AS c FROM conversation_members WHERE conversation_id = ?",
+            (conversation_id,),
+        ).fetchone()["c"]
+        max_m = 100
+        try:
+            max_m = conversation["max_members"] or 100
+        except Exception:
+            pass
+        if member_count >= max_m:
+            raise HTTPException(status_code=400, detail=f"Nhóm đã đầy ({max_m} thành viên)")
+        target = get_user_by_email(conn, email)
+        if not target:
+            raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
+        if get_membership(conn, conversation_id, target["id"]):
+            raise HTTPException(status_code=409, detail="Người dùng đã trong nhóm")
+        now = now_iso()
+        conn.execute(
+            "INSERT INTO conversation_members (conversation_id, user_id, role, joined_at) VALUES (?, ?, 'member', ?)",
+            (conversation_id, target["id"], now),
+        )
+        notif_id = generate_id("notif-")
+        conn.execute(
+            "INSERT INTO notifications (id, user_id, type, conversation_id, from_user_id, body, is_read, created_at) VALUES (?, ?, 'group_invited', ?, ?, ?, 0, ?)",
+            (notif_id, target["id"], conversation_id, current_user["id"],
+             f"Bạn được {current_user['display_name']} mời vào nhóm {conversation['name']}", now),
+        )
+        summary = conversation_summary(conn, conversation, current_user["id"])
+    await notify_after_conversation(conversation_id)
+    await broadcast_to_users([target["id"]], {"type": "group_invited", "conversation_id": conversation_id, "at": now_iso()})
+    return {"conversation": summary}
+
+
+@app.put("/api/conversations/{conversation_id}/members/{user_id}/role")
+async def update_member_role(conversation_id: str, user_id: str, request: Request, payload: UpdateMemberRolePayload) -> dict[str, Any]:
+    current_user = get_request_user(request)
+    if payload.role not in ("admin", "member"):
+        raise HTTPException(status_code=400, detail="role chỉ nhận 'admin' hoặc 'member'")
+    with db() as conn:
+        conversation = get_conversation(conn, conversation_id)
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Không tìm thấy nhóm")
+        if conversation["created_by"] != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Chỉ người tạo nhóm mới có thể đổi vai trò")
+        if not get_membership(conn, conversation_id, user_id):
+            raise HTTPException(status_code=404, detail="Thành viên không tồn tại trong nhóm")
+        conn.execute(
+            "UPDATE conversation_members SET role = ? WHERE conversation_id = ? AND user_id = ?",
+            (payload.role, conversation_id, user_id),
+        )
+        summary = conversation_summary(conn, conversation, current_user["id"])
+    await notify_after_conversation(conversation_id)
+    return {"conversation": summary}
+
+
+@app.put("/api/conversations/{conversation_id}/settings")
+async def update_group_settings(conversation_id: str, request: Request, payload: UpdateGroupSettingsPayload) -> dict[str, Any]:
+    current_user = get_request_user(request)
+    with db() as conn:
+        conversation = get_conversation(conn, conversation_id)
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Không tìm thấy nhóm")
+        membership = get_membership(conn, conversation_id, current_user["id"])
+        if not membership or membership["role"] != "admin":
+            raise HTTPException(status_code=403, detail="Chỉ Admin mới có thể thay đổi cài đặt")
+        if payload.messaging_mode and payload.messaging_mode not in ("all", "admin_only"):
+            raise HTTPException(status_code=400, detail="messaging_mode chỉ nhận 'all' hoặc 'admin_only'")
+        updates: dict[str, Any] = {}
+        if payload.name and payload.name.strip():
+            updates["name"] = payload.name.strip()
+        if payload.max_members is not None:
+            updates["max_members"] = max(2, min(payload.max_members, 500))
+        if payload.messaging_mode:
+            updates["messaging_mode"] = payload.messaging_mode
+        if updates:
+            set_clause = ", ".join(f"{k} = ?" for k in updates)
+            conn.execute(
+                f"UPDATE conversations SET {set_clause}, updated_at = ? WHERE id = ?",
+                (*updates.values(), now_iso(), conversation_id),
+            )
+        conversation = get_conversation(conn, conversation_id)
+        summary = conversation_summary(conn, conversation, current_user["id"])
+    await notify_after_conversation(conversation_id)
+    return {"conversation": summary}
+
+
+@app.delete("/api/conversations/{conversation_id}/members/{user_id}")
+async def remove_member(conversation_id: str, user_id: str, request: Request) -> dict[str, Any]:
+    current_user = get_request_user(request)
+    with db() as conn:
+        conversation = get_conversation(conn, conversation_id)
+        if not conversation:
+            raise HTTPException(status_code=404, detail="Không tìm thấy nhóm")
+        membership = get_membership(conn, conversation_id, current_user["id"])
+        if not membership or membership["role"] != "admin":
+            if current_user["id"] != user_id:
+                raise HTTPException(status_code=403, detail="Không có quyền")
+        if user_id == conversation["created_by"]:
+            raise HTTPException(status_code=400, detail="Không thể xóa người tạo nhóm")
+        conn.execute(
+            "DELETE FROM conversation_members WHERE conversation_id = ? AND user_id = ?",
+            (conversation_id, user_id),
+        )
+        summary = conversation_summary(conn, conversation, current_user["id"])
+    await notify_after_conversation(conversation_id)
+    return {"conversation": summary}
+
+
+# ================================================================
+# TASK 7: Profile API
+# ================================================================
+
+@app.get("/api/profile")
+async def get_profile(request: Request) -> dict[str, Any]:
+    current_user = get_request_user(request)
+    return {"user": serialize_user(current_user)}
+
+
+@app.put("/api/profile")
+async def update_profile(request: Request, payload: UpdateProfilePayload) -> dict[str, Any]:
+    current_user = get_request_user(request)
+    with db() as conn:
+        updates: dict[str, Any] = {}
+        if payload.display_name is not None:
+            name = payload.display_name.strip()
+            if len(name) < 2:
+                raise HTTPException(status_code=400, detail="Tên hiển thị phải có ít nhất 2 ký tự")
+            updates["display_name"] = name
+        if payload.bio is not None:
+            updates["bio"] = payload.bio.strip()
+        if updates:
+            set_clause = ", ".join(f"{k} = ?" for k in updates)
+            conn.execute(
+                f"UPDATE users SET {set_clause}, updated_at = ? WHERE id = ?",
+                (*updates.values(), now_iso(), current_user["id"]),
+            )
+        user = get_user_by_id(conn, current_user["id"])
+    return {"user": serialize_user(user)}
+
+
+
 async def notify_after_message(conversation_id: str, message: dict[str, Any], conversation: dict[str, Any]) -> None:
     with db() as conn:
         members = get_conversation_members(conn, conversation_id)
+        sender_id = message["sender"]["id"]
+        sender_name = message["sender"]["display_name"]
+        preview = (message["body"] or "")[:60] or "[Đã gửi file]"
+        # Tạo notification cho tất cả member trừ người gửi
+        notif_ids: list[str] = []
+        for member in members:
+            if member["id"] == sender_id:
+                continue
+            notif_id = generate_id("notif-")
+            conn.execute(
+                """
+                INSERT INTO notifications (id, user_id, type, conversation_id, from_user_id, body, is_read, created_at)
+                VALUES (?, ?, 'new_message', ?, ?, ?, 0, ?)
+                """,
+                (notif_id, member["id"], conversation_id, sender_id,
+                 f"{sender_name}: {preview}", now_iso()),
+            )
+            notif_ids.append(member["id"])
     await broadcast_to_users([member["id"] for member in members], {
         "type": "message_created",
         "conversation_id": conversation_id,
@@ -1055,6 +1528,15 @@ async def notify_after_message(conversation_id: str, message: dict[str, Any], co
         "conversation": conversation,
         "at": now_iso(),
     })
+    # Push số thông báo chưa đọc cho từng người
+    if notif_ids:
+        with db() as conn2:
+            for uid in notif_ids:
+                unread = conn2.execute(
+                    "SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND is_read = 0",
+                    (uid,),
+                ).fetchone()["c"]
+                await broadcast_to_users([uid], {"type": "notification_count", "unread_count": unread, "at": now_iso()})
 
 
 async def notify_after_conversation(conversation_id: str) -> None:
