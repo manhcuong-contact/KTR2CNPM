@@ -135,6 +135,117 @@
             -webkit-line-clamp: 2;
             overflow: hidden;
         }
+
+        /* ===== MOBILE RESPONSIVE ===== */
+        @media (max-width: 1023px) {
+            #appShell {
+                display: flex;
+                flex-direction: column;
+                padding: 0;
+                gap: 0;
+                position: fixed;
+                inset: 0;
+                overflow: hidden;
+            }
+
+            #appShell > aside {
+                position: absolute;
+                inset: 0;
+                border-radius: 0;
+                z-index: 20;
+                transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+                will-change: transform;
+            }
+
+            #appShell > aside.mobile-chat-open {
+                transform: translateX(-100%);
+                pointer-events: none;
+            }
+
+            #appShell > main {
+                position: absolute;
+                inset: 0;
+                border-radius: 0;
+                transform: translateX(100%);
+                transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 10;
+                will-change: transform;
+            }
+
+            #appShell > main.mobile-chat-open {
+                transform: translateX(0);
+            }
+
+            #mobileBackBtn {
+                display: flex !important;
+            }
+
+            .bubble {
+                max-width: 88% !important;
+            }
+
+            .scrollbar::-webkit-scrollbar {
+                width: 3px;
+                height: 3px;
+            }
+
+            /* Sidebar tabs: shorter text on mobile */
+            .sidebar-tab {
+                font-size: 10px !important;
+                padding: 6px 4px !important;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            /* Safe area inset for iOS bottom bar */
+            #composerWrap {
+                padding-bottom: max(16px, env(safe-area-inset-bottom)) !important;
+            }
+
+            /* Smooth native scroll on iOS */
+            #messageFeed, #conversationList {
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior-y: contain;
+            }
+
+            /* Prevent double-tap zoom */
+            button, a, input, textarea {
+                touch-action: manipulation;
+            }
+
+            /* Chat header compact on mobile */
+            #chatHeader {
+                padding: 10px 14px !important;
+            }
+
+            /* Call panel full width on mobile */
+            #callPanel {
+                left: 0;
+                right: 0;
+                bottom: 0;
+                width: 100% !important;
+                border-radius: 24px 24px 0 0 !important;
+            }
+
+            /* Auth overlay: scrollable on small screens */
+            #authOverlay > div:nth-child(2) {
+                max-height: 100dvh;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Sidebar user info: compact */
+            #appShell aside > div:last-child {
+                padding: 10px 12px !important;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            #mobileBackBtn {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body class="font-sans">
@@ -220,7 +331,7 @@
         </div>
     </div>
 
-    <div id="appShell" class="hidden h-screen w-screen gap-4 p-4 lg:grid lg:grid-cols-[340px_1fr]">
+    <div id="appShell" class="hidden h-screen w-screen lg:gap-4 lg:p-4 lg:grid lg:grid-cols-[340px_1fr]">
         <aside class="glass-strong flex min-h-0 flex-col overflow-hidden rounded-[28px]">
             <div class="border-b border-white/10 p-4">
                 <div class="flex items-center justify-between">
@@ -270,12 +381,17 @@
 
         <main class="glass-strong flex min-h-0 flex-col overflow-hidden rounded-[28px]">
             <header id="chatHeader" class="sticky top-0 z-20 border-b border-white/10 bg-slate-950/70 px-5 py-4 backdrop-blur-xl">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <div id="chatTitle" class="text-xl font-bold text-white">Chưa chọn hội thoại</div>
-                        <div id="chatSubtitle" class="mt-1 text-sm text-slate-400">Chọn một cuộc trò chuyện ở sidebar hoặc tạo mới.</div>
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex min-w-0 flex-1 items-center gap-2">
+                        <button id="mobileBackBtn" class="hidden shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 p-2 text-white active:scale-95 active:bg-white/20">
+                            <span class="material-symbols-outlined">arrow_back</span>
+                        </button>
+                        <div class="min-w-0">
+                            <div id="chatTitle" class="truncate text-lg font-bold text-white sm:text-xl">Chưa chọn hội thoại</div>
+                            <div id="chatSubtitle" class="mt-0.5 truncate text-xs text-slate-400 sm:mt-1 sm:text-sm">Chọn một cuộc trò chuyện ở sidebar hoặc tạo mới.</div>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex shrink-0 items-center gap-1 sm:gap-2">
                         <button id="voiceCallBtn" class="call-btn hidden rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-white hover:bg-white/10">
                             <span class="material-symbols-outlined align-middle">call</span>
                             Voice
@@ -476,7 +592,10 @@
             hangupBtn: document.getElementById("hangupBtn"),
             toastHost: document.getElementById("toastHost"),
             sidebarTabs: [...document.querySelectorAll(".sidebar-tab")],
-            openNewButtons: [...document.querySelectorAll("[data-open-new]")]
+            openNewButtons: [...document.querySelectorAll("[data-open-new]")],
+            mobileBackBtn: document.getElementById("mobileBackBtn"),
+            appSidebar: document.querySelector("#appShell > aside"),
+            appMain: document.querySelector("#appShell > main")
         };
 
         const wsScheme = location.protocol === "https:" ? "wss" : "ws";
@@ -853,6 +972,12 @@
             state.messages = [];
             renderConversationList();
             renderAppState();
+
+            // Mobile: slide sidebar out, slide chat in
+            if (window.innerWidth < 1024) {
+                refs.appSidebar.classList.add("mobile-chat-open");
+                refs.appMain.classList.add("mobile-chat-open");
+            }
 
             const messagesResponse = await api(`/api/conversations/${conversationId}/messages?limit=200`);
             if (!messagesResponse.ok) {
@@ -1327,6 +1452,25 @@
         refs.voiceCallBtn.onclick = () => startCall("audio").catch((error) => toast(error.message, "error"));
         refs.videoCallBtn.onclick = () => startCall("video").catch((error) => toast(error.message, "error"));
         refs.hangupBtn.onclick = () => closeCallPanel();
+
+        // Mobile back button: slide back to sidebar
+        refs.mobileBackBtn.onclick = () => {
+            refs.appSidebar.classList.remove("mobile-chat-open");
+            refs.appMain.classList.remove("mobile-chat-open");
+            state.selectedConversation = null;
+            state.selectedConversationId = "";
+            state.messages = [];
+            renderConversationList();
+            renderAppState();
+        };
+
+        // Handle viewport resize (desktop <-> mobile)
+        window.addEventListener("resize", () => {
+            if (window.innerWidth >= 1024) {
+                refs.appSidebar.classList.remove("mobile-chat-open");
+                refs.appMain.classList.remove("mobile-chat-open");
+            }
+        });
 
         window.addEventListener("beforeunload", () => {
             disconnectSocket();
