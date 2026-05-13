@@ -4,6 +4,7 @@ import asyncio
 import base64
 import hashlib
 import json
+import os
 import re
 import secrets
 import sqlite3
@@ -21,8 +22,9 @@ from pydantic import BaseModel
 
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "webchat.db"
-UPLOAD_DIR = BASE_DIR / "storage" / "uploads"
+# Hỗ trợ Railway Volume: đọc đường dẫn từ biến môi trường nếu có
+DB_PATH = Path(os.environ.get("DB_PATH", str(BASE_DIR / "webchat.db")))
+UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", str(BASE_DIR / "storage" / "uploads")))
 PASSWORD_ITERATIONS = 210_000
 SESSION_TTL_DAYS = 7
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
