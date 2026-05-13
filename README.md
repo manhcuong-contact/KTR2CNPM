@@ -2,7 +2,7 @@
 
 ## Tính năng
 
-- **Auth**: đăng ký, đăng nhập, đăng nhập Google demo
+- **Auth**: đăng ký, đăng nhập, đăng nhập Google 
 - **Chat 1:1**: nhắn tin riêng, voice/video realtime
 - **Chat 1:N**: channel chỉ admin được gửi tin
 - **Chat N:N**: group nhiều người tương tác tự do
