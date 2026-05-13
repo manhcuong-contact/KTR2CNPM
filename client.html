@@ -346,49 +346,76 @@
         </div>
     </div>
 
-    <div id="appShell" class="hidden h-screen w-screen lg:gap-4 lg:p-4 lg:grid lg:grid-cols-[340px_1fr]">
+    <div id="appShell" class="hidden h-screen w-screen lg:gap-3 lg:p-3 lg:grid lg:grid-cols-[64px_300px_1fr]">
+
+        <!-- NAV BAR (left 64px) -->
+        <nav class="glass-strong hidden lg:flex flex-col items-center gap-3 py-4 px-2 rounded-[28px] overflow-hidden">
+            <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/20 text-primary shrink-0">
+                <span class="material-symbols-outlined">chat</span>
+            </div>
+            <div class="w-8 border-t border-white/10"></div>
+            <button id="notifBellBtn" class="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white transition-colors" title="Thong bao">
+                <span class="material-symbols-outlined text-[20px]">notifications</span>
+                <span id="notifBadge" class="hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">0</span>
+            </button>
+            <div class="flex-1"></div>
+            <button id="profileNavBtn" class="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white transition-colors" title="Trang ca nhan">
+                <span class="material-symbols-outlined text-[20px]">person</span>
+            </button>
+        </nav>
+
+        <!-- SIDEBAR -->
         <aside class="glass-strong flex min-h-0 flex-col overflow-hidden rounded-[28px]">
-            <div class="border-b border-white/10 p-4">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/20 text-primary">
-                            <span class="material-symbols-outlined">chat</span>
-                        </div>
-                        <div>
-                            <div class="text-lg font-bold text-white">WebChat</div>
-                            <div class="text-sm text-slate-400">Private · Channel · Group</div>
-                        </div>
-                    </div>
-                    <button id="newConvBtn" class="rounded-full border border-white/10 bg-white/5 p-2 text-white hover:bg-white/10">
-                        <span class="material-symbols-outlined">add</span>
-                    </button>
-                </div>
-
-                <div class="mt-4 flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                    <span class="material-symbols-outlined text-slate-400">search</span>
-                    <input id="searchInput" class="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500" placeholder="Tìm cuộc trò chuyện..." />
-                </div>
-
-                <div class="mt-4 grid grid-cols-3 gap-2 text-sm">
-                    <button data-tab="personal" class="sidebar-tab rounded-2xl border border-white/10 bg-white/5 px-3 py-2 font-semibold text-white tab-active">Cá nhân</button>
-                    <button data-tab="announcements" class="sidebar-tab rounded-2xl border border-white/10 bg-white/5 px-3 py-2 font-semibold text-slate-300">Kênh thông báo</button>
-                    <button data-tab="groups" class="sidebar-tab rounded-2xl border border-white/10 bg-white/5 px-3 py-2 font-semibold text-slate-300">Nhóm</button>
+            <!-- Tabs -->
+            <div class="shrink-0 border-b border-white/10 p-3">
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                    <button id="tabFriendsBtn" data-tab="friends" class="sidebar-tab tab-active rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 font-semibold text-white">Ban be</button>
+                    <button id="tabGroupsBtn" data-tab="groups" class="sidebar-tab rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 font-semibold text-slate-300">Nhom</button>
                 </div>
             </div>
 
-            <div id="conversationList" class="scrollbar min-h-0 flex-1 space-y-2 overflow-auto p-3"></div>
+            <!-- FRIENDS TAB -->
+            <div id="friendsTabContent" class="flex min-h-0 flex-1 flex-col">
+                <div class="shrink-0 p-3 border-b border-white/5">
+                    <div class="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5">
+                        <span class="material-symbols-outlined text-slate-400 text-[18px]">person_search</span>
+                        <input id="friendSearchInput" class="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500" placeholder="Tim theo email..." />
+                        <button id="friendSearchBtn" class="shrink-0 rounded-xl bg-primary/30 px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/50">Gui</button>
+                    </div>
+                    <div id="friendSearchResults" class="mt-2 space-y-1"></div>
+                </div>
+                <div id="friendRequestsSection" class="shrink-0 border-b border-white/5">
+                    <div id="friendRequestsList" class="px-3 py-2 space-y-1"></div>
+                </div>
+                <div id="friendsList" class="scrollbar min-h-0 flex-1 overflow-auto p-3 space-y-1"></div>
+            </div>
 
-            <div class="border-t border-white/10 p-4">
-                <div class="glass flex items-center gap-3 rounded-2xl p-3">
-                    <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300">
-                        <span class="material-symbols-outlined">person</span>
+            <!-- GROUPS TAB -->
+            <div id="groupsTabContent" class="hidden min-h-0 flex-1 flex-col">
+                <div class="shrink-0 p-3 border-b border-white/5 flex gap-2">
+                    <div class="flex flex-1 items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5">
+                        <span class="material-symbols-outlined text-slate-400 text-[18px]">search</span>
+                        <input id="groupSearchInput" class="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500" placeholder="Tim nhom..." />
+                    </div>
+                    <button id="createGroupBtn" class="shrink-0 flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white hover:bg-primary/20 hover:text-primary transition-colors" title="Tao nhom">
+                        <span class="material-symbols-outlined text-[18px]">add</span>
+                    </button>
+                </div>
+                <div id="groupsList" class="scrollbar min-h-0 flex-1 overflow-auto p-3 space-y-1"></div>
+            </div>
+
+            <!-- Bottom user bar -->
+            <div class="shrink-0 border-t border-white/10 p-3">
+                <div class="glass flex items-center gap-2 rounded-2xl p-2.5">
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
+                        <span class="material-symbols-outlined text-sm">person</span>
                     </div>
                     <div class="min-w-0 flex-1">
-                        <div id="meName" class="truncate font-semibold text-white">-</div>
+                        <div id="meName" class="truncate text-sm font-semibold text-white">-</div>
                         <div id="meEmail" class="truncate text-xs text-slate-400">-</div>
                     </div>
-                    <button id="logoutBtn" class="rounded-full border border-white/10 bg-white/5 p-2 text-white hover:bg-white/10">
-                        <span class="material-symbols-outlined">logout</span>
+                    <button id="logoutBtn" class="shrink-0 rounded-full border border-white/10 bg-white/5 p-1.5 text-white hover:bg-white/10">
+                        <span class="material-symbols-outlined text-[16px]">logout</span>
                     </button>
                 </div>
             </div>
@@ -535,6 +562,113 @@
         </div>
     </div>
 
+    <!-- NOTIFICATION PANEL (TASK 14) -->
+    <div id="notifPanel" class="hidden fixed inset-0 z-[60] flex">
+        <div class="w-80 glass-strong border-r border-white/10 flex flex-col shadow-2xl overflow-hidden">
+            <div class="flex items-center justify-between border-b border-white/10 px-4 py-4">
+                <div class="font-bold text-white">Thong bao</div>
+                <div class="flex gap-2">
+                    <button id="readAllNotifBtn" class="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/10">Doc het</button>
+                    <button id="closeNotifPanel" class="rounded-full p-1.5 text-slate-400 hover:text-white"><span class="material-symbols-outlined text-[18px]">close</span></button>
+                </div>
+            </div>
+            <div id="notifList" class="scrollbar flex-1 overflow-auto p-3 space-y-1"></div>
+        </div>
+        <div class="flex-1 bg-black/40 backdrop-blur-sm cursor-pointer" id="notifPanelBackdrop"></div>
+    </div>
+
+    <!-- GROUP INFO PANEL (TASK 15) -->
+    <div id="groupInfoPanel" class="hidden fixed inset-0 z-[60] flex justify-end">
+        <div class="flex-1 bg-black/40 backdrop-blur-sm cursor-pointer" id="groupInfoPanelBackdrop"></div>
+        <div class="w-80 glass-strong border-l border-white/10 flex flex-col shadow-2xl overflow-hidden">
+            <div class="flex items-center justify-between border-b border-white/10 px-4 py-4">
+                <div class="font-bold text-white">Thong tin nhom</div>
+                <button id="closeGroupInfoPanel" class="rounded-full p-1.5 text-slate-400 hover:text-white"><span class="material-symbols-outlined text-[18px]">close</span></button>
+            </div>
+            <div id="groupSettingsSection" class="hidden shrink-0 border-b border-white/10 p-4 space-y-3">
+                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Cai dat nhom</div>
+                <input id="groupNameInput" class="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-primary/50" placeholder="Ten nhom..." />
+                <div class="flex gap-2">
+                    <select id="groupModeSelect" class="flex-1 rounded-2xl border border-white/10 bg-slate-900 px-3 py-2 text-sm text-white outline-none">
+                        <option value="all">Tat ca nhan tin</option>
+                        <option value="admin_only">Chi Admin nhan tin</option>
+                    </select>
+                    <button id="saveGroupSettingsBtn" class="rounded-2xl bg-primary px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500">Luu</button>
+                </div>
+            </div>
+            <div id="inviteMemberSection" class="hidden shrink-0 border-b border-white/10 p-4 space-y-2">
+                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Moi thanh vien</div>
+                <div class="flex gap-2">
+                    <input id="inviteEmailInput" class="flex-1 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500" placeholder="email@example.com" />
+                    <button id="inviteMemberBtn" class="rounded-2xl bg-primary px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500">Moi</button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-auto p-4 scrollbar">
+                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Thanh vien (<span id="memberCountLabel">0</span>/<span id="maxMemberLabel">100</span>)</div>
+                <div id="memberListContainer" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PROFILE PANEL (TASK 16) -->
+    <div id="profilePanel" class="hidden fixed inset-0 z-[60] flex justify-end">
+        <div class="flex-1 bg-black/40 backdrop-blur-sm cursor-pointer" id="profilePanelBackdrop"></div>
+        <div class="w-80 glass-strong border-l border-white/10 flex flex-col shadow-2xl overflow-hidden">
+            <div class="flex items-center justify-between border-b border-white/10 px-4 py-4">
+                <div class="font-bold text-white">Trang ca nhan</div>
+                <button id="closeProfilePanel" class="rounded-full p-1.5 text-slate-400 hover:text-white"><span class="material-symbols-outlined text-[18px]">close</span></button>
+            </div>
+            <div class="flex-1 overflow-auto p-6 space-y-5 scrollbar">
+                <div class="flex flex-col items-center gap-3">
+                    <div class="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary/40 to-indigo-600/40 border-2 border-primary/30">
+                        <span class="material-symbols-outlined text-4xl text-primary">person</span>
+                    </div>
+                    <div class="text-center">
+                        <div id="profileDisplayName" class="text-lg font-bold text-white">-</div>
+                        <div id="profileEmail" class="text-sm text-slate-400">-</div>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Ten hien thi</label>
+                    <input id="profileNameInput" class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-primary/50" placeholder="Ten cua ban..." />
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold uppercase tracking-wide text-slate-500">Gioi thieu</label>
+                    <textarea id="profileBioInput" rows="3" class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-primary/50 resize-none" placeholder="Viet gi do ve ban..."></textarea>
+                </div>
+                <button id="saveProfileBtn" class="w-full rounded-2xl bg-primary py-3 font-semibold text-white hover:bg-indigo-500">Luu thay doi</button>
+                <div class="border-t border-white/10 pt-4">
+                    <button id="profileLogoutBtn" class="w-full rounded-2xl border border-red-500/30 bg-red-500/10 py-3 font-semibold text-red-300 hover:bg-red-500/20">Dang xuat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CREATE GROUP MODAL -->
+    <div id="createGroupModal" class="fixed inset-0 z-[65] hidden items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60 cursor-pointer" id="createGroupModalBackdrop"></div>
+        <div class="relative z-10 w-full max-w-sm glass-strong rounded-[28px] p-6 shadow-2xl">
+            <div class="mb-5 flex items-center justify-between">
+                <div class="text-lg font-bold text-white">Tao nhom moi</div>
+                <button id="closeCreateGroupModal" class="rounded-full p-1.5 text-slate-400 hover:text-white"><span class="material-symbols-outlined text-[18px]">close</span></button>
+            </div>
+            <form id="createGroupForm" class="space-y-4">
+                <div>
+                    <label class="mb-2 block text-sm text-slate-400">Ten nhom</label>
+                    <input id="newGroupName" class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-slate-500 focus:border-primary/50" placeholder="Nhom cua minh..." required />
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm text-slate-400">So thanh vien toi da</label>
+                    <input id="newGroupMaxMembers" type="number" min="2" max="500" value="50" class="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none focus:border-primary/50" />
+                </div>
+                <div class="flex gap-3 justify-end pt-2">
+                    <button type="button" id="cancelCreateGroupBtn" class="rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 font-semibold text-white hover:bg-white/10">Huy</button>
+                    <button type="submit" class="rounded-2xl bg-primary px-5 py-2.5 font-semibold text-white hover:bg-indigo-500">Tao nhom</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         const state = {
             token: localStorage.getItem("webchat_token") || "",
@@ -543,7 +677,16 @@
             selectedConversation: null,
             selectedConversationId: "",
             messages: [],
-            activeTab: "personal",
+            // New state
+            friends: [],
+            friendRequests: [],
+            notifications: [],
+            unreadNotifCount: 0,
+            groups: [],
+            activeTab: "friends",  // "friends" | "groups"
+            friendSearch: "",
+            groupSearch: "",
+            // Legacy
             search: "",
             ws: null,
             pendingFiles: [],
@@ -565,8 +708,6 @@
             authSignupTab: document.getElementById("authSignupTab"),
             googleBtn: document.getElementById("googleBtn"),
             appShell: document.getElementById("appShell"),
-            conversationList: document.getElementById("conversationList"),
-            searchInput: document.getElementById("searchInput"),
             meName: document.getElementById("meName"),
             meEmail: document.getElementById("meEmail"),
             logoutBtn: document.getElementById("logoutBtn"),
@@ -588,32 +729,426 @@
             messageInput: document.getElementById("messageInput"),
             sendBtn: document.getElementById("sendBtn"),
             composerHint: document.getElementById("composerHint"),
-            newConvBtn: document.getElementById("newConvBtn"),
-            newConvModal: document.getElementById("newConvModal"),
-            closeNewConvModal: document.getElementById("closeNewConvModal"),
-            cancelNewConvBtn: document.getElementById("cancelNewConvBtn"),
-            newConvForm: document.getElementById("newConvForm"),
-            newTargetEmail: document.getElementById("newTargetEmail"),
-            newConvName: document.getElementById("newConvName"),
-            newConvMembers: document.getElementById("newConvMembers"),
-            newConvAdmins: document.getElementById("newConvAdmins"),
-            createModeButtons: [...document.querySelectorAll(".create-mode")],
-            directFields: [...document.querySelectorAll("[data-direct-fields]")],
-            groupFields: [...document.querySelectorAll("[data-group-fields]")],
             callPanel: document.getElementById("callPanel"),
             callTitle: document.getElementById("callTitle"),
             localVideo: document.getElementById("localVideo"),
             remoteVideo: document.getElementById("remoteVideo"),
             hangupBtn: document.getElementById("hangupBtn"),
             toastHost: document.getElementById("toastHost"),
-            sidebarTabs: [...document.querySelectorAll(".sidebar-tab")],
-            openNewButtons: [...document.querySelectorAll("[data-open-new]")],
             mobileBackBtn: document.getElementById("mobileBackBtn"),
             appSidebar: document.querySelector("#appShell > aside"),
-            appMain: document.querySelector("#appShell > main")
+            appMain: document.querySelector("#appShell > main"),
+            // Sidebar tabs
+            tabFriendsBtn: document.getElementById("tabFriendsBtn"),
+            tabGroupsBtn: document.getElementById("tabGroupsBtn"),
+            friendsTabContent: document.getElementById("friendsTabContent"),
+            groupsTabContent: document.getElementById("groupsTabContent"),
+            // Friends
+            friendSearchInput: document.getElementById("friendSearchInput"),
+            friendSearchBtn: document.getElementById("friendSearchBtn"),
+            friendSearchResults: document.getElementById("friendSearchResults"),
+            friendRequestsSection: document.getElementById("friendRequestsSection"),
+            friendRequestsList: document.getElementById("friendRequestsList"),
+            friendsList: document.getElementById("friendsList"),
+            // Groups
+            groupSearchInput: document.getElementById("groupSearchInput"),
+            createGroupBtn: document.getElementById("createGroupBtn"),
+            groupsList: document.getElementById("groupsList"),
+            // Notification
+            notifBellBtn: document.getElementById("notifBellBtn"),
+            notifBadge: document.getElementById("notifBadge"),
+            notifPanel: document.getElementById("notifPanel"),
+            notifList: document.getElementById("notifList"),
+            closeNotifPanelBtn: document.getElementById("closeNotifPanel"),
+            readAllNotifBtn: document.getElementById("readAllNotifBtn"),
+            notifPanelBackdrop: document.getElementById("notifPanelBackdrop"),
+            // Group info panel
+            groupInfoPanel: document.getElementById("groupInfoPanel"),
+            closeGroupInfoPanelBtn: document.getElementById("closeGroupInfoPanel"),
+            groupSettingsSection: document.getElementById("groupSettingsSection"),
+            groupNameInput: document.getElementById("groupNameInput"),
+            groupModeSelect: document.getElementById("groupModeSelect"),
+            saveGroupSettingsBtn: document.getElementById("saveGroupSettingsBtn"),
+            inviteMemberSection: document.getElementById("inviteMemberSection"),
+            inviteEmailInput: document.getElementById("inviteEmailInput"),
+            inviteMemberBtn: document.getElementById("inviteMemberBtn"),
+            memberListContainer: document.getElementById("memberListContainer"),
+            memberCountLabel: document.getElementById("memberCountLabel"),
+            maxMemberLabel: document.getElementById("maxMemberLabel"),
+            groupInfoPanelBackdrop: document.getElementById("groupInfoPanelBackdrop"),
+            // Profile panel
+            profilePanel: document.getElementById("profilePanel"),
+            closeProfilePanelBtn: document.getElementById("closeProfilePanel"),
+            profilePanelBackdrop: document.getElementById("profilePanelBackdrop"),
+            profileNavBtn: document.getElementById("profileNavBtn"),
+            profileDisplayName: document.getElementById("profileDisplayName"),
+            profileEmail: document.getElementById("profileEmail"),
+            profileNameInput: document.getElementById("profileNameInput"),
+            profileBioInput: document.getElementById("profileBioInput"),
+            saveProfileBtn: document.getElementById("saveProfileBtn"),
+            profileLogoutBtn: document.getElementById("profileLogoutBtn"),
+            // Create group modal
+            createGroupModal: document.getElementById("createGroupModal"),
+            createGroupForm: document.getElementById("createGroupForm"),
+            newGroupName: document.getElementById("newGroupName"),
+            newGroupMaxMembers: document.getElementById("newGroupMaxMembers"),
+            cancelCreateGroupBtn: document.getElementById("cancelCreateGroupBtn"),
+            closeCreateGroupModal: document.getElementById("closeCreateGroupModal"),
+            createGroupModalBackdrop: document.getElementById("createGroupModalBackdrop"),
         };
 
         const wsScheme = location.protocol === "https:" ? "wss" : "ws";
+
+        /* ============================================================
+           HELPERS
+           ============================================================ */
+        async function apiFetch(path, options = {}) {
+            const resp = await fetch(path, {
+                headers: { Authorization: `Bearer ${state.token}`, "Content-Type": "application/json", ...options.headers },
+                ...options,
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) throw new Error(data.detail || "Lỗi API");
+            return data;
+        }
+
+        // Alias để dùng được cả showToast và toast
+        function showToast(msg, kind) { toast(msg, kind); }
+
+        /* ============================================================
+           SIDEBAR TABS
+           ============================================================ */
+        function switchSidebarTab(tab) {
+            state.activeTab = tab;
+            const isFriends = tab === "friends";
+            refs.friendsTabContent.classList.toggle("hidden", !isFriends);
+            refs.groupsTabContent.classList.toggle("hidden", isFriends);
+            refs.tabFriendsBtn.classList.toggle("tab-active", isFriends);
+            refs.tabFriendsBtn.classList.toggle("text-white", isFriends);
+            refs.tabFriendsBtn.classList.toggle("text-slate-300", !isFriends);
+            refs.tabGroupsBtn.classList.toggle("tab-active", !isFriends);
+            refs.tabGroupsBtn.classList.toggle("text-white", !isFriends);
+            refs.tabGroupsBtn.classList.toggle("text-slate-300", isFriends);
+        }
+
+        /* ============================================================
+           NOTIFICATION PANEL (TASK 14)
+           ============================================================ */
+        function openNotifPanel() {
+            refs.notifPanel.classList.remove("hidden");
+            loadNotifications();
+        }
+        function closeNotifPanel() { refs.notifPanel.classList.add("hidden"); }
+
+        function updateNotifBadge(count) {
+            state.unreadNotifCount = count;
+            if (refs.notifBadge) {
+                refs.notifBadge.textContent = count > 99 ? "99+" : count;
+                refs.notifBadge.classList.toggle("hidden", count === 0);
+                refs.notifBadge.classList.toggle("flex", count > 0);
+            }
+        }
+
+        async function loadNotifications() {
+            try {
+                const data = await apiFetch("/api/notifications?limit=30");
+                state.notifications = data.notifications || [];
+                updateNotifBadge(data.unread_count || 0);
+                renderNotifList();
+            } catch (e) { console.error("loadNotifications", e); }
+        }
+
+        async function markAllNotificationsRead() {
+            try {
+                await apiFetch("/api/notifications/read-all", { method: "POST" });
+                state.notifications.forEach(n => n.is_read = true);
+                updateNotifBadge(0);
+                renderNotifList();
+            } catch (e) { showToast("Loi khi doc thong bao", "error"); }
+        }
+
+        function renderNotifList() {
+            if (!refs.notifList) return;
+            if (!state.notifications.length) {
+                refs.notifList.innerHTML = '<div class="py-8 text-center text-sm text-slate-500">Chua co thong bao nao</div>';
+                return;
+            }
+            refs.notifList.innerHTML = "";
+            state.notifications.forEach(n => {
+                const iconMap = { friend_request: "person_add", friend_accepted: "handshake", new_message: "chat", group_invited: "group_add" };
+                const icon = iconMap[n.type] || "notifications";
+                const unread = !n.is_read;
+                const div = document.createElement("div");
+                div.className = `flex items-start gap-3 rounded-2xl p-3 cursor-pointer transition-colors ${unread ? "bg-primary/10 border border-primary/20" : "hover:bg-white/5"}`;
+                div.innerHTML = `
+                    <span class="material-symbols-outlined text-[18px] shrink-0 mt-0.5 ${unread ? "text-primary" : "text-slate-400"}">${icon}</span>
+                    <div class="min-w-0 flex-1">
+                        <div class="text-sm ${unread ? "font-semibold text-white" : "text-slate-300"}">${n.body}</div>
+                        <div class="text-xs text-slate-500 mt-0.5">${new Date(n.created_at).toLocaleTimeString("vi-VN", {hour:"2-digit", minute:"2-digit", day:"2-digit", month:"2-digit"})}</div>
+                    </div>
+                    ${unread ? '<span class="h-2 w-2 rounded-full bg-primary shrink-0 mt-1"></span>' : ""}
+                `;
+                if (n.conversation_id) {
+                    div.addEventListener("click", () => {
+                        closeNotifPanel();
+                        const conv = state.conversations.find(c => c.id === n.conversation_id);
+                        if (conv) selectConversation(conv);
+                    });
+                } else if (n.type === "friend_request" || n.type === "friend_accepted") {
+                    div.addEventListener("click", () => { closeNotifPanel(); switchSidebarTab("friends"); });
+                }
+                refs.notifList.appendChild(div);
+            });
+        }
+
+        /* ============================================================
+           FRIENDS (TASK 12)
+           ============================================================ */
+        async function loadFriends() {
+            try {
+                const [fData, rData] = await Promise.all([
+                    apiFetch("/api/friends"),
+                    apiFetch("/api/friends/requests")
+                ]);
+                state.friends = fData.friends || [];
+                state.friendRequests = rData.requests || [];
+                renderFriendsList();
+                renderFriendRequestsList();
+            } catch (e) { console.error("loadFriends", e); }
+        }
+
+        function renderFriendsList() {
+            if (!refs.friendsList) return;
+            if (!state.friends.length) {
+                refs.friendsList.innerHTML = '<div class="py-8 text-center text-sm text-slate-500">Chua co ban be nao. Tim kiem va ket ban!</div>';
+                return;
+            }
+            refs.friendsList.innerHTML = "";
+            const query = (state.friendSearch || "").toLowerCase();
+            state.friends.filter(f => {
+                if (!query) return true;
+                const u = f.user;
+                return u && ((u.display_name||"").toLowerCase().includes(query) || (u.email||"").toLowerCase().includes(query));
+            }).forEach(f => {
+                const u = f.user;
+                if (!u) return;
+                const online = state.onlineUsers.includes(u.id);
+                const conv = state.conversations.find(c => c.kind === "direct" && c.members && c.members.some(m => m.id === u.id));
+                const div = document.createElement("div");
+                div.className = "flex items-center gap-3 rounded-2xl p-2.5 cursor-pointer hover:bg-white/5 transition-colors group";
+                div.innerHTML = `
+                    <div class="relative shrink-0">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500/30 to-violet-500/30 text-white font-bold text-sm">${(u.display_name||"?")[0].toUpperCase()}</div>
+                        ${online ? '<span class="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-400 border-2 border-slate-900"></span>' : ""}
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="truncate text-sm font-semibold text-white">${u.display_name}</div>
+                        <div class="truncate text-xs text-slate-400">${online ? "Dang online" : "Offline"}</div>
+                    </div>
+                    <button class="hidden group-hover:flex h-8 w-8 items-center justify-center rounded-full hover:bg-primary/20 text-slate-400 hover:text-primary" data-chat-friend="${u.id}">
+                        <span class="material-symbols-outlined text-[16px]">chat</span>
+                    </button>
+                `;
+                div.querySelector(`[data-chat-friend]`)?.addEventListener("click", async (e) => {
+                    e.stopPropagation();
+                    try {
+                        const data = await apiFetch("/api/conversations/direct", { method: "POST", body: JSON.stringify({ target_email: u.email }) });
+                        if (data.conversation) {
+                            if (!state.conversations.find(c => c.id === data.conversation.id)) state.conversations.unshift(data.conversation);
+                            selectConversation(data.conversation);
+                            renderGroupsList();
+                        }
+                    } catch (ex) { showToast(ex.message, "error"); }
+                });
+                refs.friendsList.appendChild(div);
+            });
+        }
+
+        function renderFriendRequestsList() {
+            if (!refs.friendRequestsList) return;
+            if (!state.friendRequests.length) {
+                refs.friendRequestsList.innerHTML = "";
+                refs.friendRequestsSection.classList.add("hidden");
+                return;
+            }
+            refs.friendRequestsSection.classList.remove("hidden");
+            refs.friendRequestsList.innerHTML = "";
+            const label = document.createElement("div");
+            label.className = "text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2 px-1";
+            label.textContent = `Loi moi ket ban (${state.friendRequests.length})`;
+            refs.friendRequestsList.appendChild(label);
+            state.friendRequests.forEach(r => {
+                const u = r.user;
+                if (!u) return;
+                const div = document.createElement("div");
+                div.className = "flex items-center gap-2 rounded-2xl bg-white/5 p-2.5 mb-1";
+                div.innerHTML = `
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-white font-bold text-sm">${(u.display_name||"?")[0].toUpperCase()}</div>
+                    <div class="min-w-0 flex-1">
+                        <div class="truncate text-sm font-semibold text-white">${u.display_name}</div>
+                        <div class="truncate text-xs text-slate-400">${u.email}</div>
+                    </div>
+                    <button class="rounded-xl bg-emerald-500/20 px-2 py-1 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/40" data-accept="${r.id}">Dong y</button>
+                    <button class="rounded-xl bg-red-500/10 px-2 py-1 text-xs font-semibold text-red-300 hover:bg-red-500/20" data-reject="${r.id}">Tu choi</button>
+                `;
+                div.querySelector(`[data-accept]`).addEventListener("click", async () => {
+                    try {
+                        const data = await apiFetch(`/api/friends/${r.id}/accept`, { method: "POST" });
+                        state.friendRequests = state.friendRequests.filter(x => x.id !== r.id);
+                        if (data.friend) state.friends.unshift(data.friend);
+                        if (data.conversation && !state.conversations.find(c => c.id === data.conversation.id)) {
+                            state.conversations.unshift(data.conversation);
+                        }
+                        showToast(`Da ket ban voi ${u.display_name}`, "success");
+                        renderFriendsList(); renderFriendRequestsList(); renderGroupsList();
+                    } catch (ex) { showToast(ex.message, "error"); }
+                });
+                div.querySelector(`[data-reject]`).addEventListener("click", async () => {
+                    try {
+                        await apiFetch(`/api/friends/${r.id}/reject`, { method: "POST" });
+                        state.friendRequests = state.friendRequests.filter(x => x.id !== r.id);
+                        renderFriendRequestsList();
+                    } catch (ex) { showToast(ex.message, "error"); }
+                });
+                refs.friendRequestsList.appendChild(div);
+            });
+        }
+
+        /* ============================================================
+           GROUPS (TASK 13)
+           ============================================================ */
+        async function loadGroups() {
+            try {
+                const data = await apiFetch("/api/conversations");
+                state.conversations = data.conversations || [];
+                state.groups = state.conversations.filter(c => c.kind === "group");
+                renderGroupsList();
+            } catch (e) { console.error("loadGroups", e); }
+        }
+
+        function renderGroupsList() {
+            if (!refs.groupsList) return;
+            const groups = state.conversations.filter(c => c.kind === "group");
+            const query = (state.groupSearch || "").toLowerCase();
+            const filtered = groups.filter(g => !query || g.name.toLowerCase().includes(query));
+            if (!filtered.length) {
+                refs.groupsList.innerHTML = '<div class="py-8 text-center text-sm text-slate-500">Chua co nhom nao. Nhan + de tao nhom!</div>';
+                return;
+            }
+            refs.groupsList.innerHTML = "";
+            filtered.forEach(g => {
+                const isSelected = state.selectedConversationId === g.id;
+                const div = document.createElement("div");
+                div.className = `flex items-center gap-3 rounded-2xl p-2.5 cursor-pointer transition-colors ${isSelected ? "bg-primary/20 border border-primary/30" : "hover:bg-white/5"}`;
+                const lastMsg = g.last_message_text || "";
+                const unreadDot = g.last_message_at && !isSelected ? '<span class="h-2 w-2 rounded-full bg-primary shrink-0"></span>' : "";
+                div.innerHTML = `
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500/30 to-pink-500/30 text-white font-bold text-sm">${g.name[0].toUpperCase()}</div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center justify-between gap-1">
+                            <div class="truncate text-sm font-semibold text-white">${g.name}</div>
+                            <span class="shrink-0 text-xs text-slate-500">${g.online_count || 0} online</span>
+                        </div>
+                        <div class="truncate text-xs text-slate-400">${lastMsg || `${g.member_count || 0} thanh vien`}</div>
+                    </div>
+                    ${unreadDot}
+                `;
+                div.addEventListener("click", () => selectConversation(g));
+                refs.groupsList.appendChild(div);
+            });
+        }
+
+        /* ============================================================
+           CREATE GROUP MODAL
+           ============================================================ */
+        function openCreateGroupModal() {
+            refs.createGroupModal.classList.remove("hidden");
+            refs.createGroupModal.classList.add("flex");
+            refs.newGroupName.value = "";
+            refs.newGroupMaxMembers.value = "50";
+            refs.newGroupName.focus();
+        }
+        function closeCreateGroupModal() {
+            refs.createGroupModal.classList.add("hidden");
+            refs.createGroupModal.classList.remove("flex");
+        }
+
+        /* ============================================================
+           GROUP INFO PANEL (TASK 15)
+           ============================================================ */
+        function openGroupInfoPanel(conv) {
+            if (!conv) return;
+            refs.groupInfoPanel.classList.remove("hidden");
+            const isAdmin = conv.is_admin;
+            refs.groupSettingsSection.classList.toggle("hidden", !isAdmin || conv.kind !== "group");
+            refs.inviteMemberSection.classList.toggle("hidden", !isAdmin || conv.kind !== "group");
+            if (isAdmin) {
+                refs.groupNameInput.value = conv.name || "";
+                refs.groupModeSelect.value = conv.messaging_mode || "all";
+            }
+            refs.memberCountLabel.textContent = conv.member_count || 0;
+            refs.maxMemberLabel.textContent = conv.max_members || 100;
+            renderMemberListInPanel(conv);
+        }
+        function closeGroupInfoPanel() { refs.groupInfoPanel.classList.add("hidden"); }
+
+        function renderMemberListInPanel(conv) {
+            if (!refs.memberListContainer) return;
+            refs.memberListContainer.innerHTML = "";
+            const members = conv.members || [];
+            const isOwner = conv.created_by === state.user?.id;
+            members.forEach(m => {
+                const isOnline = state.onlineUsers.includes(m.id);
+                const div = document.createElement("div");
+                div.className = "flex items-center gap-2 rounded-2xl p-2 hover:bg-white/5";
+                div.innerHTML = `
+                    <div class="relative shrink-0">
+                        <div class="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500/30 to-violet-500/30 text-white font-bold text-xs">${(m.display_name||"?")[0].toUpperCase()}</div>
+                        ${isOnline ? '<span class="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 border-2 border-slate-900"></span>' : ""}
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="truncate text-sm font-medium text-white">${m.display_name} ${m.id === state.user?.id ? "(ban)" : ""}</div>
+                        <div class="text-xs text-slate-500">${m.role === "admin" ? "Admin" : "Thanh vien"}</div>
+                    </div>
+                    ${isOwner && m.id !== state.user?.id ? `
+                    <button class="shrink-0 rounded-xl border border-white/10 bg-white/5 px-2 py-1 text-xs text-slate-300 hover:bg-white/10" data-toggle-role="${m.id}" data-current-role="${m.role}" data-conv="${conv.id}">
+                        ${m.role === "admin" ? "Bo admin" : "Them admin"}
+                    </button>` : ""}
+                `;
+                div.querySelectorAll("[data-toggle-role]").forEach(btn => {
+                    btn.addEventListener("click", async () => {
+                        const newRole = btn.dataset.currentRole === "admin" ? "member" : "admin";
+                        try {
+                            const res = await apiFetch(`/api/conversations/${btn.dataset.conv}/members/${btn.dataset.toggleRole}/role`, {
+                                method: "PUT", body: JSON.stringify({ role: newRole })
+                            });
+                            if (res.conversation) {
+                                const idx = state.conversations.findIndex(c => c.id === res.conversation.id);
+                                if (idx !== -1) state.conversations[idx] = res.conversation;
+                                if (state.selectedConversation?.id === res.conversation.id) state.selectedConversation = res.conversation;
+                                openGroupInfoPanel(res.conversation);
+                                renderGroupsList();
+                            }
+                        } catch (ex) { showToast(ex.message, "error"); }
+                    });
+                });
+                refs.memberListContainer.appendChild(div);
+            });
+        }
+
+        /* ============================================================
+           PROFILE PANEL (TASK 16)
+           ============================================================ */
+        function openProfilePanel() {
+            refs.profilePanel.classList.remove("hidden");
+            if (state.user) {
+                refs.profileDisplayName.textContent = state.user.display_name || "-";
+                refs.profileEmail.textContent = state.user.email || "-";
+                refs.profileNameInput.value = state.user.display_name || "";
+                refs.profileBioInput.value = state.user.bio || "";
+            }
+        }
+        function closeProfilePanel() { refs.profilePanel.classList.add("hidden"); }
 
         function el(tag, className = "", text = "") {
             const node = document.createElement(tag);
@@ -975,7 +1510,10 @@
             }
         }
 
-        async function selectConversation(conversationId) {
+        async function selectConversation(conversationOrId) {
+            // Accept cả string ID lẫn conversation object
+            const conversationId = typeof conversationOrId === "string" ? conversationOrId : conversationOrId?.id;
+            if (!conversationId) return;
             const response = await api(`/api/conversations/${conversationId}`);
             if (!response.ok) {
                 toast((await response.json()).detail || "Không thể mở hội thoại", "error");
@@ -986,6 +1524,7 @@
             state.selectedConversationId = conversationId;
             state.messages = [];
             renderConversationList();
+            renderGroupsList();
             renderAppState();
 
             // Mobile: slide sidebar out, slide chat in
@@ -1079,6 +1618,7 @@
                 state.onlineUsers = message.online_users || [];
                 state.conversations = message.conversations || state.conversations;
                 renderConversationList();
+                renderGroupsList();
                 toast("Đã kết nối realtime", "success");
                 return;
             }
@@ -1090,10 +1630,12 @@
                     state.onlineUsers = state.onlineUsers.filter((id) => id !== message.user_id);
                 }
                 renderConversationList();
+                renderFriendsList();
                 return;
             }
             if (message.type === "conversation_updated") {
                 await refreshConversations();
+                renderGroupsList();
                 if (state.selectedConversation?.id === message.conversation_id) {
                     await selectConversation(message.conversation_id);
                 }
@@ -1101,14 +1643,19 @@
             }
             if (message.type === "message_created") {
                 upsertConversation(message.conversation);
+                renderGroupsList();
                 if (state.selectedConversation?.id === message.conversation_id) {
                     state.messages.push(message.message);
                     renderMessageFeed();
                 }
+                // Cập nhật badge thông báo
+                state.unreadNotifCount = (state.unreadNotifCount || 0) + 1;
+                updateNotifBadge(state.unreadNotifCount);
                 return;
             }
             if (message.type === "conversation_deleted") {
                 removeConversation(message.conversation_id);
+                renderGroupsList();
                 return;
             }
             if (message.type === "messages") {
@@ -1129,6 +1676,39 @@
             if (message.type === "auth_expired") {
                 toast("Phiên đăng nhập đã hết hạn", "error");
                 clearSession();
+                return;
+            }
+            // === Các event mới (TASK 10) ===
+            if (message.type === "friend_request") {
+                state.friendRequests = state.friendRequests || [];
+                if (message.request && !state.friendRequests.find(r => r.id === message.request.id)) {
+                    state.friendRequests.unshift(message.request);
+                }
+                renderFriendRequestsList();
+                updateNotifBadge((state.unreadNotifCount || 0) + 1);
+                toast(`${message.request?.user?.display_name || "Ai đó"} gửi lời mời kết bạn!`, "info");
+                return;
+            }
+            if (message.type === "friend_accepted") {
+                await loadFriends();
+                if (message.conversation) {
+                    if (!state.conversations.find(c => c.id === message.conversation.id)) {
+                        state.conversations.unshift(message.conversation);
+                    }
+                    renderGroupsList();
+                    renderConversationList();
+                }
+                toast(`${message.friend?.display_name || "Bạn"} đã chấp nhận lời mời kết bạn!`, "success");
+                return;
+            }
+            if (message.type === "notification") {
+                updateNotifBadge((state.unreadNotifCount || 0) + 1);
+                if (message.notification) {
+                    state.notifications = state.notifications || [];
+                    state.notifications.unshift(message.notification);
+                    renderNotifList();
+                }
+                return;
             }
         }
 
@@ -1318,7 +1898,12 @@
                 await loadMe();
                 setAuthView(true);
                 connectSocket();
-                await refreshConversations();
+                await Promise.all([
+                    refreshConversations(),
+                    loadFriends(),
+                    loadNotifications(),
+                ]);
+                renderGroupsList();
             } catch {
                 clearSession();
             }
@@ -1491,9 +2076,175 @@
             disconnectSocket();
         });
 
+        // ============================================================
+        // EVENT LISTENERS — NAV BAR & PANELS (TASK 17)
+        // ============================================================
+
+        // Notification panel
+        if (refs.notifBellBtn) refs.notifBellBtn.onclick = openNotifPanel;
+        if (refs.closeNotifPanelBtn) refs.closeNotifPanelBtn.onclick = closeNotifPanel;
+        if (refs.notifPanelBackdrop) refs.notifPanelBackdrop.onclick = closeNotifPanel;
+        if (refs.readAllNotifBtn) refs.readAllNotifBtn.onclick = markAllNotificationsRead;
+
+        // Group info panel
+        if (refs.closeGroupInfoPanelBtn) refs.closeGroupInfoPanelBtn.onclick = closeGroupInfoPanel;
+        if (refs.groupInfoPanelBackdrop) refs.groupInfoPanelBackdrop.onclick = closeGroupInfoPanel;
+
+        // Click tên nhóm trong chat header → mở group info panel
+        if (refs.chatTitle) {
+            refs.chatTitle.style.cursor = "pointer";
+            refs.chatTitle.onclick = () => {
+                const conv = state.selectedConversation;
+                if (conv && conv.kind === "group") openGroupInfoPanel(conv);
+            };
+        }
+
+        // Group settings (lưu tên nhóm + mode)
+        if (refs.saveGroupSettingsBtn) {
+            refs.saveGroupSettingsBtn.onclick = async () => {
+                const conv = state.selectedConversation;
+                if (!conv) return;
+                try {
+                    const res = await apiFetch(`/api/conversations/${conv.id}/settings`, {
+                        method: "PUT",
+                        body: JSON.stringify({
+                            name: refs.groupNameInput.value.trim(),
+                            messaging_mode: refs.groupModeSelect.value
+                        })
+                    });
+                    if (res.conversation) {
+                        const idx = state.conversations.findIndex(c => c.id === res.conversation.id);
+                        if (idx !== -1) state.conversations[idx] = res.conversation;
+                        state.selectedConversation = res.conversation;
+                        renderGroupsList();
+                        renderConversationList();
+                        setHeaderFromConversation(res.conversation);
+                        openGroupInfoPanel(res.conversation);
+                    }
+                    toast("Đã cập nhật nhóm", "success");
+                } catch (ex) { toast(ex.message, "error"); }
+            };
+        }
+
+        // Invite member
+        if (refs.inviteMemberBtn) {
+            refs.inviteMemberBtn.onclick = async () => {
+                const conv = state.selectedConversation;
+                if (!conv || !refs.inviteEmailInput) return;
+                try {
+                    const res = await apiFetch(`/api/conversations/${conv.id}/invite`, {
+                        method: "POST",
+                        body: JSON.stringify({ email: refs.inviteEmailInput.value.trim() })
+                    });
+                    refs.inviteEmailInput.value = "";
+                    if (res.conversation) {
+                        const idx = state.conversations.findIndex(c => c.id === res.conversation.id);
+                        if (idx !== -1) state.conversations[idx] = res.conversation;
+                        state.selectedConversation = res.conversation;
+                        openGroupInfoPanel(res.conversation);
+                    }
+                    toast("Đã mời thành viên", "success");
+                } catch (ex) { toast(ex.message, "error"); }
+            };
+        }
+
+        // Profile panel
+        if (refs.profileNavBtn) refs.profileNavBtn.onclick = openProfilePanel;
+        if (refs.closeProfilePanelBtn) refs.closeProfilePanelBtn.onclick = closeProfilePanel;
+        if (refs.profilePanelBackdrop) refs.profilePanelBackdrop.onclick = closeProfilePanel;
+
+        // Profile save button
+        if (refs.saveProfileBtn) {
+            refs.saveProfileBtn.onclick = async () => {
+                try {
+                    const data = await apiFetch("/api/profile", {
+                        method: "PUT",
+                        body: JSON.stringify({
+                            display_name: refs.profileNameInput.value.trim(),
+                            bio: refs.profileBioInput.value.trim()
+                        })
+                    });
+                    if (data.user) {
+                        state.user = data.user;
+                        refs.meName.textContent = state.user.display_name;
+                        refs.profileDisplayName.textContent = state.user.display_name;
+                    }
+                    toast("Đã cập nhật hồ sơ", "success");
+                } catch (ex) { toast(ex.message, "error"); }
+            };
+        }
+
+        // Profile logout button
+        if (refs.profileLogoutBtn) {
+            refs.profileLogoutBtn.onclick = async () => {
+                closeProfilePanel();
+                try {
+                    if (state.token) await api("/api/auth/logout", { method: "POST" });
+                } finally {
+                    clearSession();
+                    toast("Đã đăng xuất", "success");
+                }
+            };
+        }
+
+        // Sidebar friend/group tabs
+        if (refs.tabFriendsBtn) refs.tabFriendsBtn.onclick = () => { switchSidebarTab("friends"); loadFriends(); };
+        if (refs.tabGroupsBtn) refs.tabGroupsBtn.onclick = () => { switchSidebarTab("groups"); loadGroups(); };
+
+        // Friend search (tìm user để kết bạn qua nút "Gửi")
+        if (refs.friendSearchBtn) {
+            refs.friendSearchBtn.onclick = async () => {
+                const email = refs.friendSearchInput?.value.trim();
+                if (!email) return;
+                try {
+                    await apiFetch("/api/friends/request", { method: "POST", body: JSON.stringify({ email }) });
+                    toast("Đã gửi lời mời kết bạn!", "success");
+                    if (refs.friendSearchResults) refs.friendSearchResults.innerHTML = "";
+                } catch (ex) { toast(ex.message, "error"); }
+            };
+        }
+
+        // Group search
+        if (refs.groupSearchInput) {
+            refs.groupSearchInput.oninput = (e) => {
+                state.groupSearch = e.target.value.trim();
+                renderGroupsList();
+            };
+        }
+
+        // Create group modal
+        if (refs.createGroupBtn) refs.createGroupBtn.onclick = openCreateGroupModal;
+        if (refs.closeCreateGroupModal) refs.closeCreateGroupModal.onclick = closeCreateGroupModal;
+        if (refs.createGroupModalBackdrop) refs.createGroupModalBackdrop.onclick = closeCreateGroupModal;
+
+        // Create group form
+        if (refs.createGroupForm) {
+            refs.createGroupForm.onsubmit = async (e) => {
+                e.preventDefault();
+                const name = refs.newGroupName?.value.trim();
+                const maxMembers = parseInt(refs.newGroupMaxMembers?.value) || 50;
+                if (!name) { toast("Nhập tên nhóm", "error"); return; }
+                try {
+                    const data = await apiFetch("/api/conversations", {
+                        method: "POST",
+                        body: JSON.stringify({ name, max_members: maxMembers })
+                    });
+                    closeCreateGroupModal();
+                    if (data.conversation) {
+                        state.conversations.unshift(data.conversation);
+                        renderGroupsList();
+                        selectConversation(data.conversation.id);
+                        switchSidebarTab("groups");
+                    }
+                    toast(`Đã tạo nhóm "${name}"`, "success");
+                } catch (ex) { toast(ex.message, "error"); }
+            };
+        }
+
         renderAuthTabs("login");
         renderCreateMode("direct");
         renderSidebarTabs();
+        switchSidebarTab("friends");
         setHeaderFromConversation(null);
         updateComposerPreview();
         setAuthView(false);
