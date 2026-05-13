@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# Database (sẽ dùng volume trên Railway)
+webchat.db
+
+# Uploads (sẽ dùng volume trên Railway)
+storage/uploads/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
